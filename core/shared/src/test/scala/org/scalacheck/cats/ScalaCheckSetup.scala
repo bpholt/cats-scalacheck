@@ -1,10 +1,7 @@
 package org.scalacheck.cats
 
 import cats._
-import cats.data._
-import cats.syntax.all._
 import org.scalacheck._
-import org.scalacheck.cats.implicits._
 import org.scalacheck.rng.Seed
 
 trait ScalaCheckSetup {
@@ -20,11 +17,6 @@ trait ScalaCheckSetup {
 
   implicit lazy val cogenSeed: Cogen[Seed] =
     Cogen[Long].contramap(_.long._1)
-
-  implicit def arbitraryNonEmptyList[A: Arbitrary]: Arbitrary[NonEmptyList[A]] =
-    Arbitrary(
-      (Arbitrary.arbitrary[A], Arbitrary.arbitrary[List[A]]).mapN(NonEmptyList(_, _))
-    )
 
   // Better Arbitrary Gen
   implicit def arbitraryGen[A: Arbitrary]: Arbitrary[Gen[A]] = {

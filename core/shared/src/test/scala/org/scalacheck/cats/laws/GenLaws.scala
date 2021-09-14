@@ -7,7 +7,7 @@ import cats.data.NonEmptyList
 import cats.tests.CatsSuite
 import org.scalacheck.Gen
 import org.scalacheck.cats.ScalaCheckSetup
-import org.scalacheck.cats.instances.GenInstances._
+import org.scalacheck.cats.implicits._
 
 class GenLaws extends CatsSuite with ScalaCheckSetup {
   // Tests Alternative
