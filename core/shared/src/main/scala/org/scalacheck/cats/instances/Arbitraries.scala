@@ -10,62 +10,37 @@ import org.scalacheck.cats.instances.PartiallyAppliedFromOneAnd.fromOneAnd
 
 import scala.collection.immutable._
 
-trait Arbitraries extends Arbitraries1
+trait Arbitraries extends Arbitraries1 with GenInstancesForCatsData
 
-sealed private[instances] trait Arbitraries1 extends Arbitraries0 {
+trait GenInstancesForCatsData {
   def genOneAnd[F[_], A: Arbitrary](implicit F: Arbitrary[F[A]]): Gen[OneAnd[F, A]] =
     (arbitrary[A], arbitrary[F[A]]).mapN(OneAnd(_, _))
-
-  implicit def arbOneAnd[F[_], A: Arbitrary](implicit F: Arbitrary[F[A]]): Arbitrary[OneAnd[F, A]] =
-    Arbitrary(genOneAnd[F, A])
 
   def genNonEmptyList[A: Arbitrary]: Gen[NonEmptyList[A]] =
     fromOneAnd[NonEmptyList](NonEmptyList[A](_, _))
 
-  implicit def arbNonEmptyList[A: Arbitrary]: Arbitrary[NonEmptyList[A]] =
-    Arbitrary(genNonEmptyList[A])
-
   def genChain[A: Arbitrary]: Gen[Chain[A]] =
     arbitrary[List[A]].map(Chain.fromSeq)
-
-  implicit def arbChain[A: Arbitrary]: Arbitrary[Chain[A]] = Arbitrary(genChain[A])
 
   def genNonEmptyChain[A: Arbitrary]: Gen[NonEmptyChain[A]] =
     fromOneAnd[NonEmptyChain](NonEmptyChain.fromChainPrepend[A])
 
-  implicit def arbNonEmptyChain[A: Arbitrary]: Arbitrary[NonEmptyChain[A]] =
-    Arbitrary(genNonEmptyChain[A])
-
   def genNonEmptySeq[A: Arbitrary]: Gen[NonEmptySeq[A]] =
     fromOneAnd[NonEmptySeq](NonEmptySeq[A](_, _))
-
-  implicit def arbNonEmptySeq[A: Arbitrary]: Arbitrary[NonEmptySeq[A]] =
-    Arbitrary(genNonEmptySeq[A])
 
   def genNonEmptySet[A: Arbitrary: Order]: Gen[NonEmptySet[A]] =
     fromOneAnd[NonEmptySet]((head: A, tail: Seq[A]) => NonEmptySet.of(head, tail: _*))
 
-  implicit def arbNonEmptySet[A: Arbitrary: Order]: Arbitrary[NonEmptySet[A]] =
-    Arbitrary(genNonEmptySet[A])
-
   def genNonEmptyVector[A: Arbitrary]: Gen[NonEmptyVector[A]] =
     fromOneAnd[NonEmptyVector](NonEmptyVector[A](_, _))
 
-  implicit def arbNonEmptyVector[A: Arbitrary]: Arbitrary[NonEmptyVector[A]] =
-    Arbitrary(genNonEmptyVector[A])
-
   def genConst[A: Arbitrary, B]: Gen[Const[A, B]] =
     arbitrary[A].map(Const(_))
-
-  implicit def arbConst[A: Arbitrary, B]: Arbitrary[Const[A, B]] = Arbitrary(genConst[A, B])
 
   def genNonEmptyMap[K: Arbitrary: Order, V: Arbitrary]: Gen[NonEmptyMap[K, V]] =
     arbitrary[OneAnd[List, (K, V)]].map {
       case OneAnd(head, tail) => NonEmptyMap.of(head, tail: _*)
     }
-
-  implicit def arbNonEmptyMap[K: Arbitrary: Order, V: Arbitrary]: Arbitrary[NonEmptyMap[K, V]] =
-    Arbitrary(genNonEmptyMap[K, V])
 
   def genEitherTWithErrorChannel[F[_], A: Arbitrary, B: Arbitrary, C: Arbitrary](
       implicit F: ApplicativeError[F, C]): Gen[EitherT[F, A, B]] =
@@ -74,9 +49,9 @@ sealed private[instances] trait Arbitraries1 extends Arbitraries0 {
       case Right(ab) => EitherT.fromEither[F](ab)
     }
 
-  implicit def arbEitherTWithErrorChannel[F[_], A: Arbitrary, B: Arbitrary, C: Arbitrary](
-      implicit F: ApplicativeError[F, C]): Arbitrary[EitherT[F, A, B]] =
-    Arbitrary(genEitherTWithErrorChannel[F, A, B, C])
+  def genEitherT[F[_]: Applicative, A, B](
+      implicit arb: Arbitrary[Either[A, B]]): Gen[EitherT[F, A, B]] =
+    arbitrary[Either[A, B]].map(EitherT.fromEither[F](_))
 
   def genOptionTWithErrorChannel[F[_], A: Arbitrary, C: Arbitrary](
       implicit F: ApplicativeError[F, C]): Gen[OptionT[F, A]] =
@@ -84,19 +59,47 @@ sealed private[instances] trait Arbitraries1 extends Arbitraries0 {
       case Left(c) => OptionT(c.raiseError[F, Option[A]])
       case Right(a) => OptionT.fromOption[F](a)
     }
-}
-
-sealed private[instances] trait Arbitraries0 {
-  def genEitherT[F[_]: Applicative, A, B](
-      implicit arb: Arbitrary[Either[A, B]]): Gen[EitherT[F, A, B]] =
-    arbitrary[Either[A, B]].map(EitherT.fromEither[F](_))
-
-  implicit def arbEitherT[F[_]: Applicative, A, B](
-      implicit arb: Arbitrary[Either[A, B]]): Arbitrary[EitherT[F, A, B]] =
-    Arbitrary(genEitherT[F, A, B])
 
   def genOptionT[F[_]: Applicative, A](implicit arb: Arbitrary[Option[A]]): Gen[OptionT[F, A]] =
     arbitrary[Option[A]].map(OptionT.fromOption[F](_))
+}
+
+sealed private[instances] trait Arbitraries1 extends Arbitraries0 { this: GenInstancesForCatsData =>
+  implicit def arbOneAnd[F[_], A: Arbitrary](implicit F: Arbitrary[F[A]]): Arbitrary[OneAnd[F, A]] =
+    Arbitrary(genOneAnd[F, A])
+
+  implicit def arbNonEmptyList[A: Arbitrary]: Arbitrary[NonEmptyList[A]] =
+    Arbitrary(genNonEmptyList[A])
+
+  implicit def arbChain[A: Arbitrary]: Arbitrary[Chain[A]] = Arbitrary(genChain[A])
+
+  implicit def arbNonEmptyChain[A: Arbitrary]: Arbitrary[NonEmptyChain[A]] =
+    Arbitrary(genNonEmptyChain[A])
+
+  implicit def arbNonEmptySeq[A: Arbitrary]: Arbitrary[NonEmptySeq[A]] =
+    Arbitrary(genNonEmptySeq[A])
+
+  implicit def arbNonEmptySet[A: Arbitrary: Order]: Arbitrary[NonEmptySet[A]] =
+    Arbitrary(genNonEmptySet[A])
+
+  implicit def arbNonEmptyVector[A: Arbitrary]: Arbitrary[NonEmptyVector[A]] =
+    Arbitrary(genNonEmptyVector[A])
+
+  implicit def arbConst[A: Arbitrary, B]: Arbitrary[Const[A, B]] = Arbitrary(genConst[A, B])
+
+  implicit def arbNonEmptyMap[K: Arbitrary: Order, V: Arbitrary]: Arbitrary[NonEmptyMap[K, V]] =
+    Arbitrary(genNonEmptyMap[K, V])
+
+  implicit def arbEitherTWithErrorChannel[F[_], A: Arbitrary, B: Arbitrary, C: Arbitrary](
+      implicit F: ApplicativeError[F, C]): Arbitrary[EitherT[F, A, B]] =
+    Arbitrary(genEitherTWithErrorChannel[F, A, B, C])
+
+}
+
+sealed private[instances] trait Arbitraries0 { this: GenInstancesForCatsData =>
+  implicit def arbEitherT[F[_]: Applicative, A, B](
+      implicit arb: Arbitrary[Either[A, B]]): Arbitrary[EitherT[F, A, B]] =
+    Arbitrary(genEitherT[F, A, B])
 
   implicit def arbOptionT[F[_]: Applicative, A, B](
       implicit arb: Arbitrary[Option[A]]): Arbitrary[OptionT[F, A]] = Arbitrary(genOptionT[F, A])
