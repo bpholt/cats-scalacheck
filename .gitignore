@@ -11,3 +11,4 @@ tags
 .bloop
 .vscode
 metals.sbt
+.bsp/
